@@ -1,0 +1,17 @@
+{
+  "name": "lovesync",
+  "version": "1.0.0",
+  "private": true,
+  "description": "LoveSync - long distance couple watch-together app",
+  "dependencies": {
+    "@capacitor/android": "^7.0.0",
+    "@capacitor/core": "^7.0.0",
+    "peerjs": "^1.5.4"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^7.0.0"
+  },
+  "scripts": {
+    "prep": "cp node_modules/peerjs/dist/peerjs.min.js www/peerjs.min.js"
+  }
+}

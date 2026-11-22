@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0d0820">
+<title>LoveSync</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ১. স্প্ল্যাশ -->
+<section id="s-splash" class="screen active">
+  <div class="sp-img"></div>
+  <div class="sp-body">
+    <svg class="inf" viewBox="0 0 120 60" aria-hidden="true">
+      <defs><linearGradient id="ig" x1="0" x2="1"><stop offset="0" stop-color="#ff3d8b"/><stop offset="1" stop-color="#ffb347"/></linearGradient></defs>
+      <path d="M60 30C48 10 14 8 14 30s34 20 46 0c12-20 46-22 46 0s-34 20-46 0z" fill="none" stroke="url(#ig)" stroke-width="9" stroke-linecap="round"/>
+    </svg>
+    <div class="brand">LoveSync</div>
+    <div class="tag">দূরে থাকলেও একসাথে ❤️</div>
+    <svg class="wave" viewBox="0 0 300 60"><path d="M0 40C40 40 60 30 100 38S160 52 200 30 270 12 300 8" fill="none" stroke="#ffc94d" stroke-width="2" stroke-linecap="round"/></svg>
+  </div>
+</section>
+
+<!-- ২. রুমে ঢোকো -->
+<section id="s-join" class="screen">
+  <div class="top-heart">🤍</div>
+  <h2 class="c">রুমে ঢোকো</h2>
+  <p class="c sub">তোমার নাম আর রুম কোড দাও ❤️</p>
+  <label class="field"><span>👤</span><input id="name" placeholder="তোমার নাম লিখুন" maxlength="20"></label>
+  <label class="field"><span>🔒</span><input id="room" placeholder="রুম কোড লিখুন" maxlength="24" autocapitalize="none" autocomplete="off"></label>
+  <button id="joinBtn" class="grad big">রুমে ঢোকো &nbsp;→</button>
+  <div class="or"><i></i><b>অথবা ❤️</b><i></i></div>
+  <button id="permCard" class="card perm">
+    <span class="cam">📷</span>
+    <div><b>ক্যামেরা ও মাইকের অনুমতি দিন</b><small>ভিডিও কলের জন্য প্রয়োজন</small></div>
+  </button>
+  <div class="joinwave"></div>
+</section>
+
+<!-- ৩. হোম -->
+<section id="s-home" class="screen">
+  <div class="bar"><button class="icon" id="homeBack">←</button><button class="icon" id="homeMenu">⋮</button></div>
+  <div class="pair">
+    <div class="av ring" id="avMe"></div>
+    <svg class="beat" viewBox="0 0 120 40"><path d="M0 20h30l8-14 10 28 8-20 6 6h28" fill="none" stroke="#ff4f9a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <div class="beatheart">💗</div>
+    <div class="av ring" id="avPartner"></div>
+  </div>
+  <div id="homeStatus" class="c status">অপেক্ষা করছি... 🕒</div>
+  <button class="card count" id="countCard">
+    <span class="cal">🗓️</span>
+    <div class="c"><small>আমাদের দেখা হবে আর</small><b id="cdBig">—</b><small id="cdDate">তারিখ ঠিক করো</small></div>
+  </button>
+  <button id="watchBtn" class="grad big">▶ &nbsp;একসাথে ভিডিও দেখি 🎬</button>
+  <div class="bench"></div>
+</section>
+
+<!-- ৪. ওয়াচ রুম -->
+<section id="s-watch" class="screen">
+  <header class="wtop">
+    <span class="dot" id="wdot"></span><span id="wstatus">অপেক্ষা করছি...</span>
+    <button id="leaveBtn" class="red">বের হও ⎋</button>
+  </header>
+
+  <div id="stage">
+    <div id="empty"><span>🎬</span><small>নিচে লিংক দিয়ে ভিডিও চালাও</small></div>
+    <div id="ytbox" class="box hidden"></div>
+    <div id="fbbox" class="box hidden"></div>
+  </div>
+
+  <div id="transport">
+    <button id="bBack" class="t">⏪<small>১০</small></button>
+    <button id="bPlay" class="t big">⏸</button>
+    <button id="bFwd" class="t">⏩<small>১০</small></button>
+    <button id="bMute" class="t">🔊</button>
+    <button id="bStop" class="t">✖</button>
+  </div>
+
+  <div id="linkbar">
+    <span>🔗</span><input id="url" placeholder="YouTube / Facebook লিংক দিন..."><button id="loadBtn" class="purple">চালাও</button>
+  </div>
+
+  <div id="callwrap">
+    <div id="partnerTile">
+      <div id="remotePh"></div>
+      <video id="remoteCam" playsinline autoplay></video>
+    </div>
+    <div id="selfTile"><video id="selfCam" playsinline autoplay muted></video></div>
+    <div class="callbtns">
+      <button id="micBtn" class="round">🎤</button>
+      <button id="camBtn" class="round">🎥</button>
+      <button id="flipBtn" class="round">🔄</button>
+    </div>
+  </div>
+
+  <div id="reacts">
+    <button>❤️</button><button>😂</button><button>😮</button><button>😢</button><button>🔥</button><button>😘</button>
+  </div>
+  <button id="chatBtn" class="card chatb">💬 চ্যাট <b id="badge" class="hidden">0</b></button>
+  <div id="floats"></div>
+</section>
+
+<!-- ৫. চ্যাট -->
+<section id="s-chat" class="sheet">
+  <div class="bar solid"><button class="icon" id="chatBack">‹</button><h3>চ্যাট</h3><button class="icon" id="chatClear">🗑</button></div>
+  <div id="msgs"></div>
+  <div class="composer">
+    <button class="icon" id="emojiBtn">🙂</button>
+    <input id="msgIn" placeholder="মেসেজ লিখুন..." autocomplete="off">
+    <button id="sendBtn" class="send">➤</button>
+  </div>
+  <div id="emojiRow" class="hidden"></div>
+</section>
+
+<!-- ৬. সেটিংস -->
+<section id="s-settings" class="screen">
+  <div class="bar solid"><button class="icon" id="setBack">←</button><h3>সেটিংস</h3><span class="icon">⚙️</span></div>
+  <button class="row card" id="rName"><div class="av sm" id="avSet"></div><div><b>নাম পরিবর্তন করুন</b><small id="setName">—</small></div><i>›</i></button>
+  <button class="row card" id="rDate"><span class="ri">🗓️</span><div><b>দেখা হওয়ার তারিখ</b><small id="setDate">—</small></div><i>›</i></button>
+  <button class="row card" id="rRoom"><span class="ri">🔒</span><div><b>রুম কোড পরিবর্তন</b><small id="setRoom">—</small></div><i>›</i></button>
+  <button class="row card" id="rLeave"><span class="ri">🚪</span><div><b>রুম থেকে বের হওয়া</b></div><i>›</i></button>
+  <div class="card foot c"><div class="fb">💗 LoveSync</div><small>দূরে থাকলেও একসাথে ❤️</small><small>Version 1.0.0</small></div>
+</section>
+
+<input id="pick" type="file" accept="image/*" class="hidden">
+
+<div id="modal" class="hidden"><div class="card mbox">
+  <h3 id="mT"></h3><input id="mI"><div class="mrow"><button id="mC">বাতিল</button><button id="mOk" class="grad">ঠিক আছে</button></div>
+</div></div>
+<div id="toast"></div>
+
+<script src="peerjs.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

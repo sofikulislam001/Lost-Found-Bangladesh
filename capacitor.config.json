@@ -1,0 +1,10 @@
+{
+  "appId": "com.sofik.lovesync",
+  "appName": "LoveSync",
+  "webDir": "www",
+  "backgroundColor": "#0d0820",
+  "server": {
+    "hostname": "lovesync.app",
+    "androidScheme": "https"
+  }
+}
