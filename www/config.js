@@ -1,5 +1,6 @@
 /* LoveSync সেটিংস — Supabase Realtime (সিঙ্ক/চ্যাট/কলের সিগন্যাল) */
 window.LS_CONFIG = {
+  defaultRoom: 'prtevn7k2x9m4q8z',
   url: 'https://acvjmncxynhblarcvigs.supabase.co',
   key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFjdmptbmN4eW5oYmxhcmN2aWdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ5NzU0NzYsImV4cCI6MjExMDU1MTQ3Nn0.F3n4OVItDDF4jbdk-5xfdFf6Q_rZv4_Rje2jlIy3_jA',
   ice: [

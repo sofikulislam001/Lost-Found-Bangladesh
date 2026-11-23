@@ -430,10 +430,13 @@ $('#pick').onchange = e => {
   img.src = url; e.target.value = '';
 };
 function pickFace(sd) {
-  joinSide = sd;
   document.querySelectorAll('.face').forEach(b => b.classList.toggle('sel', b.dataset.side === sd));
-  if (sd === 'G') return pickAvatar(() => { side = ''; LS.set('side', ''); });
-  const img = new Image(); img.onload = () => { setMyAvatar(makeAvatar(img)); side = sd; LS.set('side', sd); if (!$('#name').value.trim()) $('#name').value = PRESET[sd].name; renderProfiles(); };
+  const img = new Image();
+  img.onload = () => {
+    side = sd; LS.set('side', sd); myName = PRESET[sd].name; LS.set('name', myName);
+    room = CFG.defaultRoom; LS.set('room', room); LS.set('v', 2);
+    setMyAvatar(makeAvatar(img)); enterRoom();
+  };
   img.src = PRESET[sd].img;
 }
 document.querySelectorAll('.face').forEach(b => b.onclick = () => pickFace(b.dataset.side));
@@ -517,6 +520,7 @@ function goBack() {
 try { const A = window.Capacitor && Capacitor.Plugins && Capacitor.Plugins.App; if (A && A.addListener) A.addListener('backButton', goBack); } catch (e) {}
 
 /* ---------- শুরু ---------- */
+if (myName && LS.get('v', 0) < 2) { room = CFG.defaultRoom; LS.set('room', room); LS.set('v', 2); }
 $('#name').value = myName; $('#room').value = room;
 if (side) document.querySelectorAll('.face').forEach(b => b.classList.toggle('sel', b.dataset.side === side));
 renderProfiles(); renderRecents();

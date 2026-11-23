@@ -174,3 +174,8 @@ button{cursor:pointer}
 .row .av{flex:none!important;width:56px;height:56px}
 
 #diag{font-size:11px;color:var(--soft);opacity:.75;margin-top:-4px;padding-left:4px;flex:none}
+
+#s-join .whorow{gap:28px;margin:10px 0 6px}
+#s-join .face img{width:118px;height:118px;border-width:3px;opacity:1}
+#s-join .face{font-size:18px;font-weight:700;opacity:1;color:#fff}
+#s-join{justify-content:center}
