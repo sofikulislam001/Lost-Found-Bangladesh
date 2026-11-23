@@ -9,18 +9,10 @@
 </head>
 <body>
 
-<!-- ১. স্প্ল্যাশ -->
+<!-- ১. স্প্ল্যাশ (কাপল পোস্টার) -->
 <section id="s-splash" class="screen active">
-  <div class="sp-img"></div>
-  <div class="sp-body">
-    <svg class="inf" viewBox="0 0 120 60" aria-hidden="true">
-      <defs><linearGradient id="ig" x1="0" x2="1"><stop offset="0" stop-color="#ff3d8b"/><stop offset="1" stop-color="#ffb347"/></linearGradient></defs>
-      <path d="M60 30C48 10 14 8 14 30s34 20 46 0c12-20 46-22 46 0s-34 20-46 0z" fill="none" stroke="url(#ig)" stroke-width="9" stroke-linecap="round"/>
-    </svg>
-    <div class="brand">LoveSync</div>
-    <div class="tag">দূরে থাকলেও একসাথে ❤️</div>
-    <svg class="wave" viewBox="0 0 300 60"><path d="M0 40C40 40 60 30 100 38S160 52 200 30 270 12 300 8" fill="none" stroke="#ffc94d" stroke-width="2" stroke-linecap="round"/></svg>
-  </div>
+  <img class="poster-img" src="img/poster.jpg" alt="">
+  <div class="loadbar"><i></i></div>
 </section>
 
 <!-- ২. রুমে ঢোকো -->
@@ -29,9 +21,16 @@
   <h2 class="c">রুমে ঢোকো</h2>
   <p class="c sub">তোমার নাম আর রুম কোড দাও ❤️</p>
   <label class="field"><span>👤</span><input id="name" placeholder="তোমার নাম লিখুন" maxlength="20"></label>
-  <label class="field"><span>🔒</span><input id="room" placeholder="রুম কোড লিখুন" maxlength="24" autocapitalize="none" autocomplete="off"></label>
+  <label class="field"><span>🔒</span><input id="room" placeholder="রুম কোড লিখুন (ইংরেজিতে)" maxlength="24" autocapitalize="none" autocomplete="off"></label>
+  <div class="who">
+    <small>তোমার ছবি বেছে নাও (ঐচ্ছিক)</small>
+    <div class="whorow">
+      <button class="face" data-side="L"><img src="img/face_l.jpg" alt=""><span>Priti</span></button>
+      <button class="face" data-side="R"><img src="img/face_r.jpg" alt=""><span>Evan</span></button>
+      <button class="face" data-side="G"><b>📷</b><span>গ্যালারি</span></button>
+    </div>
+  </div>
   <button id="joinBtn" class="grad big">রুমে ঢোকো &nbsp;→</button>
-  <div class="or"><i></i><b>অথবা ❤️</b><i></i></div>
   <button id="permCard" class="card perm">
     <span class="cam">📷</span>
     <div><b>ক্যামেরা ও মাইকের অনুমতি দিন</b><small>ভিডিও কলের জন্য প্রয়োজন</small></div>
@@ -48,11 +47,18 @@
     <div class="beatheart">💗</div>
     <div class="av ring" id="avPartner"></div>
   </div>
+  <div class="names c"><span id="nmMe">—</span> <i>&amp;</i> <span id="nmPartner">—</span></div>
   <div id="homeStatus" class="c status">অপেক্ষা করছি... 🕒</div>
+  <div id="sincePill" class="pill hidden"></div>
   <button class="card count" id="countCard">
     <span class="cal">🗓️</span>
     <div class="c"><small>আমাদের দেখা হবে আর</small><b id="cdBig">—</b><small id="cdDate">তারিখ ঠিক করো</small></div>
   </button>
+  <div class="chips">
+    <button id="missBtn" class="card chip">💌<span>মিস করছি</span></button>
+    <button id="hugBtn" class="card chip">🤗<span>হাগ</span></button>
+    <button id="cardBtn" class="card chip">🖼️<span>আমাদের কার্ড</span></button>
+  </div>
   <button id="watchBtn" class="grad big">▶ &nbsp;একসাথে ভিডিও দেখি 🎬</button>
   <div class="bench"></div>
 </section>
@@ -72,20 +78,22 @@
 
   <div id="transport">
     <button id="bBack" class="t">⏪<small>১০</small></button>
-    <button id="bPlay" class="t big">⏸</button>
+    <button id="bPlay" class="t big">▶️</button>
     <button id="bFwd" class="t">⏩<small>১০</small></button>
     <button id="bMute" class="t">🔊</button>
     <button id="bStop" class="t">✖</button>
   </div>
 
   <div id="linkbar">
-    <span>🔗</span><input id="url" placeholder="YouTube / Facebook লিংক দিন..."><button id="loadBtn" class="purple">চালাও</button>
+    <span>🔗</span><input id="url" placeholder="YouTube / Facebook লিংক দিন..."><button id="pasteBtn" class="mini">📋</button><button id="loadBtn" class="purple">চালাও</button>
   </div>
+  <div id="recents" class="hidden"></div>
 
   <div id="callwrap">
     <div id="partnerTile">
       <div id="remotePh"></div>
       <video id="remoteCam" playsinline autoplay></video>
+      <div id="pbadge"><span id="pbName"></span><span id="pbIcons"></span></div>
     </div>
     <div id="selfTile"><video id="selfCam" playsinline autoplay muted></video></div>
     <div class="callbtns">
@@ -99,33 +107,48 @@
     <button>❤️</button><button>😂</button><button>😮</button><button>😢</button><button>🔥</button><button>😘</button>
   </div>
   <button id="chatBtn" class="card chatb">💬 চ্যাট <b id="badge" class="hidden">0</b></button>
-  <div id="floats"></div>
 </section>
 
 <!-- ৫. চ্যাট -->
 <section id="s-chat" class="sheet">
-  <div class="bar solid"><button class="icon" id="chatBack">‹</button><h3>চ্যাট</h3><button class="icon" id="chatClear">🗑</button></div>
+  <div class="bar solid chead">
+    <button class="icon" id="chatBack">‹</button>
+    <div class="av sm" id="avChat"></div>
+    <div class="ct"><b id="chName">—</b><small id="chStat">অফলাইন</small></div>
+    <button class="icon" id="chatClear">🗑</button>
+  </div>
   <div id="msgs"></div>
+  <div id="emojiRow" class="hidden"></div>
   <div class="composer">
     <button class="icon" id="emojiBtn">🙂</button>
     <input id="msgIn" placeholder="মেসেজ লিখুন..." autocomplete="off">
     <button id="sendBtn" class="send">➤</button>
   </div>
-  <div id="emojiRow" class="hidden"></div>
 </section>
 
 <!-- ৬. সেটিংস -->
 <section id="s-settings" class="screen">
   <div class="bar solid"><button class="icon" id="setBack">←</button><h3>সেটিংস</h3><span class="icon">⚙️</span></div>
-  <button class="row card" id="rName"><div class="av sm" id="avSet"></div><div><b>নাম পরিবর্তন করুন</b><small id="setName">—</small></div><i>›</i></button>
-  <button class="row card" id="rDate"><span class="ri">🗓️</span><div><b>দেখা হওয়ার তারিখ</b><small id="setDate">—</small></div><i>›</i></button>
-  <button class="row card" id="rRoom"><span class="ri">🔒</span><div><b>রুম কোড পরিবর্তন</b><small id="setRoom">—</small></div><i>›</i></button>
-  <button class="row card" id="rLeave"><span class="ri">🚪</span><div><b>রুম থেকে বের হওয়া</b></div><i>›</i></button>
-  <div class="card foot c"><div class="fb">💗 LoveSync</div><small>দূরে থাকলেও একসাথে ❤️</small><small>Version 1.0.0</small></div>
+  <div class="scroll">
+    <button class="row card" id="rName"><div class="av sm" id="avSet"></div><div><b>নাম পরিবর্তন করুন</b><small id="setName">—</small></div><i>›</i></button>
+    <button class="row card" id="rPhoto"><span class="ri">🖼️</span><div><b>প্রোফাইল ছবি বদলাও</b><small>গ্যালারি থেকে</small></div><i>›</i></button>
+    <button class="row card" id="rDate"><span class="ri">🗓️</span><div><b>দেখা হওয়ার তারিখ</b><small id="setDate">—</small></div><i>›</i></button>
+    <button class="row card" id="rSince"><span class="ri">💞</span><div><b>আমরা একসাথে আছি (শুরুর তারিখ)</b><small id="setSince">—</small></div><i>›</i></button>
+    <button class="row card" id="rRoom"><span class="ri">🔒</span><div><b>রুম কোড পরিবর্তন</b><small id="setRoom">—</small></div><i>›</i></button>
+    <button class="row card" id="rCopy"><span class="ri">📋</span><div><b>রুম কোড কপি করো</b><small>সঙ্গীকে পাঠানোর জন্য</small></div><i>›</i></button>
+    <button class="row card" id="tVib"><span class="ri">📳</span><div><b>ভাইব্রেশন</b><small>মেসেজ ও মিস-করছি এলে</small></div><span class="sw" id="swVib"></span></button>
+    <button class="row card" id="tAwake"><span class="ri">💡</span><div><b>ভিডিও দেখার সময় স্ক্রিন জাগিয়ে রাখো</b></div><span class="sw" id="swAwake"></span></button>
+    <button class="row card" id="rLeave"><span class="ri">🚪</span><div><b>রুম থেকে বের হওয়া</b></div><i>›</i></button>
+    <div class="card foot c"><div class="fb">💗 LoveSync</div><small>দূরে থাকলেও একসাথে ❤️</small><small>Version 1.1.0</small></div>
+  </div>
 </section>
+
+<!-- আমাদের কার্ড (পোস্টার) -->
+<div id="posterView" class="hidden"><img src="img/poster.jpg" alt=""><button class="icon x" id="posterClose">✕</button></div>
 
 <input id="pick" type="file" accept="image/*" class="hidden">
 
+<div id="floats"></div>
 <div id="modal" class="hidden"><div class="card mbox">
   <h3 id="mT"></h3><input id="mI"><div class="mrow"><button id="mC">বাতিল</button><button id="mOk" class="grad">ঠিক আছে</button></div>
 </div></div>
