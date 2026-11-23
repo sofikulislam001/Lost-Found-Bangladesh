@@ -23,7 +23,7 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Copy PeerJS into app
+      - name: Copy Supabase client into app
         run: npm run prep
 
       - name: Add Android project

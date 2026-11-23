@@ -2,11 +2,6 @@
 /* LoveSync v1.1 — একসাথে ভিডিও দেখা + ভিডিও কল + চ্যাট + রিঅ্যাকশন (দুজনের জন্য) */
 
 const $ = s => document.querySelector(s);
-const ICE = [
-  { urls: 'stun:stun.l.google.com:19302' },
-  { urls: 'stun:stun1.l.google.com:19302' },
-  { urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:443', 'turn:openrelay.metered.ca:443?transport=tcp'], username: 'openrelayproject', credential: 'openrelayproject' }
-];
 const BN = '০১২৩৪৫৬৭৮৯';
 const toBn = n => String(n).replace(/\d/g, d => BN[d]);
 const MONTHS = ['জানুয়ারি','ফেব্রুয়ারি','মার্চ','এপ্রিল','মে','জুন','জুলাই','আগস্ট','সেপ্টেম্বর','অক্টোবর','নভেম্বর','ডিসেম্বর'];
@@ -113,69 +108,110 @@ async function getCam(force) {
   return localCam;
 }
 
-/* ---------- সংযোগ (PeerJS) ---------- */
-let peer = null, conn = null, me = 0, camCall = null, retryT = null, lastRx = 0;
-const hostId = () => `lsync-${room}-1`;
-function stopPeer() { clearTimeout(retryT); try { if (conn) conn.close(); } catch (e) {} try { if (camCall) camCall.close(); } catch (e) {} try { if (peer) peer.destroy(); } catch (e) {} peer = conn = camCall = null; me = 0; }
-function startPeer(n = 1) {
-  stopPeer();
-  peer = new Peer(`lsync-${room}-${n}`, { config: { iceServers: ICE }, debug: 0 });
-  peer.on('open', () => { me = n; setOnline(false); if (n === 2) connectHost(); });
-  peer.on('connection', c => { if (conn && conn.open) { c.close(); return; } bindConn(c); });
-  peer.on('call', onCall);
-  peer.on('disconnected', () => { try { peer.reconnect(); } catch (e) {} });
-  peer.on('error', e => {
-    if (e.type === 'unavailable-id') { if (n === 1) startPeer(2); else { toast('রুম এখন ব্যস্ত, একটু পরে আবার চেষ্টা করছি...'); retryT = setTimeout(() => startPeer(1), 6000); } }
-    else if (e.type === 'peer-unavailable') { if (me === 2) retryT = setTimeout(connectHost, 3000); }
-    else if (['network', 'server-error', 'socket-error', 'socket-closed'].includes(e.type)) { retryT = setTimeout(() => startPeer(me || 1), 4000); }
+/* ---------- সংযোগ (Supabase Realtime + WebRTC) ---------- */
+const CFG = window.LS_CONFIG;
+const ICE = CFG.ice;
+let sb = null, ch = null, joined = false, partnerId = '', roomTok = 0, retryT = null, lastRx = 0;
+const myId = uid();
+let pc = null, iceBuf = [], callStart = 0;
+const isInit = () => !!partnerId && myId < partnerId;
+
+function diag() {
+  const c = pc ? pc.iceConnectionState : '—';
+  $('#diag').textContent = `সার্ভার ${joined ? '✓' : '✗'} · সঙ্গী ${online ? '✓' : '✗'} · কল ${c === 'connected' || c === 'completed' ? '✓' : c}`;
+}
+async function roomName() {
+  const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('lovesync:' + room));
+  return 'ls-' + [...new Uint8Array(d)].slice(0, 16).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+async function stopRoom() {
+  roomTok++; clearTimeout(retryT); closePC(); partnerId = ''; joined = false;
+  if (ch && sb) { try { await sb.removeChannel(ch); } catch (e) {} }
+  ch = null; setOnline(false);
+}
+async function startRoom() {
+  await stopRoom();
+  if (!window.supabase) { toast('লাইব্রেরি লোড হয়নি, অ্যাপ আবার খোলো'); return; }
+  if (!sb) sb = supabase.createClient(CFG.url, CFG.key, { realtime: { params: { eventsPerSecond: 20 } } });
+  const tok = roomTok, name = await roomName();
+  ch = sb.channel(name, { config: { broadcast: { self: false, ack: false }, presence: { key: myId } } });
+  ch.on('broadcast', { event: 'm' }, ({ payload }) => { if (payload && payload.from !== myId) onData(payload); });
+  ch.on('presence', { event: 'sync' }, onPresence);
+  ch.subscribe(async st => {
+    if (tok !== roomTok) return;
+    if (st === 'SUBSCRIBED') { joined = true; diag(); try { await ch.track({ name: myName }); } catch (e) {} }
+    else if (['CHANNEL_ERROR', 'TIMED_OUT', 'CLOSED'].includes(st)) {
+      joined = false; diag(); clearTimeout(retryT);
+      retryT = setTimeout(() => { if (tok === roomTok) startRoom(); }, 4000);
+    }
   });
 }
-function connectHost() { if (!peer || peer.destroyed) return; bindConn(peer.connect(hostId(), { reliable: true })); }
-function bindConn(c) {
-  conn = c;
-  const opened = () => {
-    lastRx = Date.now(); setOnline(true); sendProfile(); sendDates(); sendMedia(); flushPending();
-    if (me === 2) callCam();
-    if (cur && P) send({ t: 'load', v: cur, time: P.time(), playing: P.playing(), hello: true });
-    if (chatOpen()) sendSeen();
-  };
-  c.open ? opened() : c.on('open', opened);
-  c.on('data', onData);
-  c.on('close', () => { if (conn === c) { conn = null; setOnline(false); if (me === 2) retryT = setTimeout(connectHost, 3000); } });
-  c.on('error', () => {});
+function onPresence() {
+  if (!ch) return;
+  const ids = Object.keys(ch.presenceState()).filter(k => k !== myId).sort();
+  const pid = ids[0] || '';
+  if (pid === partnerId) return;
+  partnerId = pid;
+  if (pid) { lastRx = Date.now(); setOnline(true); onPartnerJoin(); }
+  else { setOnline(false); closePC(); }
 }
-const send = o => { if (conn && conn.open) { try { conn.send(o); return true; } catch (e) {} } return false; };
+function onPartnerJoin() {
+  sendProfile(); sendDates(); sendMedia(); flushPending();
+  if (cur && P) send({ t: 'load', v: cur, time: P.time(), playing: P.playing(), hello: true });
+  if (chatOpen()) sendSeen();
+  if (isInit()) startCall();
+}
+const send = o => { if (!ch || !joined) return false; try { ch.send({ type: 'broadcast', event: 'm', payload: Object.assign({ from: myId }, o) }); return true; } catch (e) { return false; } };
 const sendProfile = () => send({ t: 'profile', name: myName, avatar: myAvatar });
 const sendDates = () => ['meet', 'since'].forEach(k => { if (dates[k].d) send({ t: 'date', k, d: dates[k].d, ts: dates[k].ts }); });
 const sendMedia = () => { const v = localCam && localCam.getVideoTracks()[0], a = localCam && localCam.getAudioTracks()[0]; send({ t: 'media', cam: !!(v && v.enabled), mic: !!(a && a.enabled) }); };
 
-/* কানেকশন পাহারা: হার্টবিট + অ্যাপ ফিরে এলে রিকভারি */
-setInterval(() => { if (conn && conn.open) send({ t: 'ping' }); }, 5000);
-setInterval(() => { if (conn && conn.open && lastRx && Date.now() - lastRx > 15000) { try { conn.close(); } catch (e) {} } }, 4000);
+/* কানেকশন পাহারা */
+setInterval(() => { if (joined) send({ t: 'ping' }); }, 5000);
+setInterval(() => { if (partnerId && online && lastRx && Date.now() - lastRx > 25000) setOnline(false); }, 4000);
+setInterval(() => { diag(); if (online && isInit() && (!pc || !['connected', 'completed'].includes(pc.iceConnectionState)) && Date.now() - callStart > 14000) startCall(); }, 6000);
 document.addEventListener('visibilitychange', async () => {
   if (document.hidden || !room || !myName) return;
   if (current === 'watch') wake(true);
-  if (!peer || peer.destroyed) return startPeer(1);
-  if (peer.disconnected) { try { peer.reconnect(); } catch (e) {} }
-  if (me === 2 && (!conn || !conn.open)) connectHost();
-  if (localCam && localCam.getTracks().some(t => t.readyState === 'ended')) { await getCam(true); if (me === 2) callCam(); else send({ t: 'recall' }); }
+  if (!ch || !joined) return startRoom();
+  try { await ch.track({ name: myName }); } catch (e) {}
+  if (localCam && localCam.getTracks().some(t => t.readyState === 'ended')) { await getCam(true); if (isInit()) startCall(); else send({ t: 'recall' }); }
 });
 
-function wireCall(call) {
-  camCall = call;
-  call.on('stream', s => { const v = $('#remoteCam'); v.srcObject = s; v.play().catch(() => {}); if (pMedia.cam) $('#remotePh').style.display = 'none'; });
-  call.on('close', () => { $('#remotePh').style.display = 'flex'; });
+/* ভিডিও কল (WebRTC, সিগন্যালিং Supabase দিয়ে) */
+function closePC() { if (pc) { try { pc.close(); } catch (e) {} pc = null; } iceBuf = []; $('#remotePh').style.display = 'flex'; $('#remoteCam').srcObject = null; }
+function newPC() {
+  closePC();
+  const p = pc = new RTCPeerConnection({ iceServers: ICE });
+  if (localCam && localCam.getTracks().length) localCam.getTracks().forEach(t => p.addTrack(t, localCam));
+  else if (isInit()) { p.addTransceiver('video', { direction: 'recvonly' }); p.addTransceiver('audio', { direction: 'recvonly' }); }
+  p.onicecandidate = e => { if (e.candidate) send({ t: 'rtc', k: 'ice', c: e.candidate }); };
+  p.ontrack = e => { const v = $('#remoteCam'); v.srcObject = e.streams[0] || new MediaStream([e.track]); v.play().catch(() => {}); if (pMedia.cam) $('#remotePh').style.display = 'none'; };
+  p.oniceconnectionstatechange = () => { diag(); if (p.iceConnectionState === 'failed' && isInit() && pc === p) startCall(); };
+  return p;
 }
-async function callCam() {
+async function startCall() {
+  if (!isInit() || !joined) return;
+  callStart = Date.now();
   await getCam();
-  if (!localCam || !peer || peer.destroyed) return;
-  if (camCall) try { camCall.close(); } catch (e) {}
-  wireCall(peer.call(hostId(), localCam, { metadata: { kind: 'cam' } }));
+  try {
+    const p = newPC(); const off = await p.createOffer(); await p.setLocalDescription(off);
+    send({ t: 'rtc', k: 'offer', sdp: p.localDescription });
+  } catch (e) { toast('কল শুরু করা যায়নি'); }
 }
-async function onCall(call) {
-  await getCam();
-  if (camCall) try { camCall.close(); } catch (e) {}
-  call.answer(localCam || undefined); wireCall(call);
+async function flushIce() { const b = iceBuf; iceBuf = []; for (const c of b) { try { await pc.addIceCandidate(c); } catch (e) {} } }
+async function onRtc(o) {
+  try {
+    if (o.k === 'offer') {
+      await getCam(); const p = newPC(); await p.setRemoteDescription(o.sdp);
+      const ans = await p.createAnswer(); await p.setLocalDescription(ans);
+      send({ t: 'rtc', k: 'answer', sdp: p.localDescription }); flushIce();
+    } else if (o.k === 'answer') {
+      if (pc && pc.signalingState === 'have-local-offer') { await pc.setRemoteDescription(o.sdp); flushIce(); }
+    } else if (o.k === 'ice') {
+      if (pc && pc.remoteDescription) await pc.addIceCandidate(o.c); else iceBuf.push(o.c);
+    }
+  } catch (e) { /* পরের চেষ্টায় ঠিক হবে */ }
 }
 
 /* ---------- ভিডিও (YouTube / Facebook) ---------- */
@@ -291,19 +327,20 @@ setInterval(() => {
   if (!quiet() && Math.abs(t - (lastT + (pl ? 0.7 : 0))) > 1.8) send({ t: 'seek', time: t });
   lastT = t;
 }, 700);
-setInterval(() => { if (P && me === 1 && P.playing()) send({ t: 'tick', time: P.time(), playing: true }); }, 4000);
+setInterval(() => { if (P && isInit() && P.playing()) send({ t: 'tick', time: P.time(), playing: true }); }, 4000);
 
 /* ---------- মেসেজ গ্রহণ ---------- */
 let typingUntil = 0;
 function onData(o) {
   if (!o || !o.t) return;
-  lastRx = Date.now();
+  lastRx = Date.now(); if (partnerId && !online) setOnline(true);
   switch (o.t) {
     case 'ping': break;
     case 'profile': partner = { name: o.name || '', avatar: o.avatar || '' }; LS.set('partner', partner); renderProfiles(); setOnline(true); break;
     case 'date': { const k = o.k || 'meet'; if (dates[k] && (o.ts || 0) > dates[k].ts) { dates[k] = { d: o.d, ts: o.ts }; LS.set(k === 'meet' ? 'date' : 'since', o.d); LS.set(k === 'meet' ? 'dateTs' : 'sinceTs', o.ts); renderDates(); } break; }
     case 'media': pMedia = { cam: o.cam, mic: o.mic }; if (pMedia.cam && $('#remoteCam').srcObject) $('#remotePh').style.display = 'none'; renderPBadge(); break;
-    case 'recall': if (me === 2) callCam(); break;
+    case 'recall': if (isInit()) startCall(); break;
+    case 'rtc': onRtc(o); break;
     case 'load': if (o.hello && cur && sameV(cur, o.v)) break; loadVideo(o.v, o); break;
     case 'stop': stopVideo(); break;
     case 'play': if (!P) { pending = { time: o.time, playing: true }; break; } remote(() => { if (Math.abs(P.time() - o.time) > 1) P.seek(o.time); P.play(); }); lastT = o.time; break;
@@ -348,11 +385,11 @@ function gotChat(o) {
   if (chatOpen()) { renderMsgs(); sendSeen(); }
   else { unread++; const b = $('#badge'); b.textContent = toBn(unread); b.classList.remove('hidden'); vib(80); toast(`💬 ${partnerName() || 'সে'}: ${o.text.slice(0, 40)}`); }
 }
-function flushPending() { chat.forEach(m => { if (m.me && m.st === 'p' && send({ t: 'chat', id: m.id, text: m.text, ts: m.ts })) m.st = 's'; }); saveChat(); if (chatOpen()) renderMsgs(); }
+function flushPending() { chat.forEach(m => { if (m.me && m.st === 'p' && online && send({ t: 'chat', id: m.id, text: m.text, ts: m.ts })) m.st = 's'; }); saveChat(); if (chatOpen()) renderMsgs(); }
 function sendMsg() {
   const i = $('#msgIn'), text = i.value.trim(); if (!text) return;
   const m = { id: uid(), me: true, text, ts: Date.now(), st: 'p' }; i.value = '';
-  if (send({ t: 'chat', id: m.id, text, ts: m.ts })) m.st = 's';
+  if (online && send({ t: 'chat', id: m.id, text, ts: m.ts })) m.st = 's';
   chat.push(m); saveChat(); renderMsgs();
 }
 let typedAt = 0;
@@ -372,7 +409,7 @@ function loveBurst(kind) {
   toast(kind === 'hug' ? `🤗 ${partnerName() || 'সে'} তোমাকে জড়িয়ে ধরছে` : `💌 ${partnerName() || 'সে'} তোমাকে মিস করছে`);
 }
 function sendLove(kind) {
-  if (!send({ t: 'love', kind })) return toast('সে এখন অনলাইনে নেই, অনলাইনে এলে পাঠাও');
+  if (!online || !send({ t: 'love', kind })) return toast('সে এখন অনলাইনে নেই, অনলাইনে এলে পাঠাও');
   for (let i = 0; i < 8; i++) setTimeout(() => floatEmoji(kind === 'hug' ? '🤗' : '💌'), i * 90); vib(60);
 }
 
@@ -402,7 +439,7 @@ function pickFace(sd) {
 document.querySelectorAll('.face').forEach(b => b.onclick = () => pickFace(b.dataset.side));
 
 /* ---------- বোতাম ---------- */
-async function enterRoom() { await getCam(); show('home'); renderProfiles(); renderRecents(); startPeer(1); }
+async function enterRoom() { await getCam(); show('home'); renderProfiles(); renderRecents(); startRoom(); }
 $('#joinBtn').onclick = () => {
   const n = $('#name').value.trim(), r = cleanRoom($('#room').value);
   if (!n) return toast('তোমার নাম লেখো');
@@ -428,9 +465,9 @@ async function changeDate(k, title) {
   if (v) { dates[k] = { d: v, ts: Date.now() }; LS.set(k === 'meet' ? 'date' : 'since', v); LS.set(k === 'meet' ? 'dateTs' : 'sinceTs', dates[k].ts); renderDates(); sendDates(); }
 }
 $('#rName').onclick = async () => { const v = await ask('তোমার নাম', myName); if (v) { myName = v; LS.set('name', v); renderProfiles(); sendProfile(); } };
-$('#rRoom').onclick = async () => { const v = cleanRoom((await ask('নতুন রুম কোড (ইংরেজি অক্ষর/সংখ্যা)', room)) || ''); if (v.length >= 4) { room = v; LS.set('room', v); renderProfiles(); startPeer(1); toast('নতুন কোডে সংযোগ হচ্ছে...'); } else if (v) toast('কমপক্ষে ৪টা অক্ষর দাও'); };
+$('#rRoom').onclick = async () => { const v = cleanRoom((await ask('নতুন রুম কোড (ইংরেজি অক্ষর/সংখ্যা)', room)) || ''); if (v.length >= 4) { room = v; LS.set('room', v); renderProfiles(); startRoom(); toast('নতুন কোডে সংযোগ হচ্ছে...'); } else if (v) toast('কমপক্ষে ৪টা অক্ষর দাও'); };
 $('#rCopy').onclick = async () => { try { await navigator.clipboard.writeText(room); toast('রুম কোড কপি হয়েছে ✅'); } catch (e) { toast('কোড: ' + room); } };
-$('#rLeave').onclick = () => { stopPeer(); stopVideo(); room = ''; LS.set('room', ''); $('#room').value = ''; setOnline(false); show('join'); };
+$('#rLeave').onclick = () => { stopRoom(); stopVideo(); room = ''; LS.set('room', ''); $('#room').value = ''; setOnline(false); show('join'); };
 function toggle(key, sw) { opt[key] = !opt[key]; LS.set(key, opt[key]); $(sw).classList.toggle('on', opt[key]); }
 $('#tVib').onclick = () => { toggle('vib', '#swVib'); vib(60); };
 $('#tAwake').onclick = () => toggle('awake', '#swAwake');
@@ -453,7 +490,7 @@ $('#flipBtn').onclick = async () => {
   try {
     const ns = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing } });
     const nt = ns.getVideoTracks()[0], old = localCam.getVideoTracks()[0];
-    const snd = camCall && camCall.peerConnection && camCall.peerConnection.getSenders().find(s => s.track && s.track.kind === 'video');
+    const snd = pc && pc.getSenders().find(s => s.track && s.track.kind === 'video');
     if (snd) await snd.replaceTrack(nt);
     if (old) { localCam.removeTrack(old); old.stop(); } localCam.addTrack(nt);
     $('#selfCam').srcObject = localCam; $('#selfCam').style.transform = facing === 'user' ? 'scaleX(-1)' : 'none';

@@ -6,13 +6,13 @@
   "dependencies": {
     "@capacitor/android": "^7.0.0",
     "@capacitor/core": "^7.0.0",
-    "peerjs": "^1.5.4",
-    "@capacitor/app": "^7.0.0"
+    "@capacitor/app": "^7.0.0",
+    "@supabase/supabase-js": "^2.45.0"
   },
   "devDependencies": {
     "@capacitor/cli": "^7.0.0"
   },
   "scripts": {
-    "prep": "cp node_modules/peerjs/dist/peerjs.min.js www/peerjs.min.js"
+    "prep": "cp node_modules/@supabase/supabase-js/dist/umd/supabase.js www/supabase.js"
   }
 }
